@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>デイトレ相棒</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#111111">
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial; margin:0; background:#0b0b0c; color:#f2f2f2;}
+    header{padding:14px 16px; background:#111; position:sticky; top:0; border-bottom:1px solid #222;}
+    h1{font-size:16px; margin:0;}
+    main{padding:14px 16px; max-width:900px; margin:0 auto;}
+    .card{background:#121214; border:1px solid #242428; border-radius:12px; padding:12px; margin:12px 0;}
+    .row{display:flex; gap:10px; flex-wrap:wrap;}
+    label{font-size:12px; color:#bdbdbd; display:block; margin-bottom:6px;}
+    input, select, textarea{background:#0d0d0f; border:1px solid #2a2a2f; color:#f2f2f2; border-radius:10px; padding:10px; width:100%;}
+    textarea{min-height:70px;}
+    .col{flex:1; min-width:150px;}
+    button{background:#1f6feb; border:0; color:#fff; padding:10px 12px; border-radius:10px; font-weight:600;}
+    button.secondary{background:#2a2a2f;}
+    .pill{display:inline-block; padding:6px 10px; border-radius:999px; background:#1a1a1f; border:1px solid #2a2a2f; margin-right:8px; font-size:12px;}
+    .ok{border-color:#1f9d55;}
+    .ng{border-color:#ff4d4f;}
+    table{width:100%; border-collapse:collapse; font-size:13px;}
+    th,td{padding:8px; border-bottom:1px solid #232328; text-align:left; vertical-align:top;}
+    .muted{color:#bdbdbd; font-size:12px;}
+    .danger{color:#ff4d4f;}
+    .good{color:#33d17a;}
+  </style>
+</head>
+<body>
+<header>
+  <h1>デイトレ相棒（PWA）</h1>
+</header>
+
+<main>
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <label>1日最大損失（円）</label>
+        <input id="dailyMaxLoss" type="number" step="1" placeholder="例：-30000（絶対ライン）">
+      </div>
+      <div class="col">
+        <label>1トレード損切り（円）</label>
+        <input id="stopLoss" type="number" step="1" placeholder="例：-3000">
+      </div>
+      <div class="col">
+        <label>1トレード利確（円）</label>
+        <input id="takeProfit" type="number" step="1" placeholder="例：10000">
+      </div>
+      <div class="col">
+        <label>最大トレード回数</label>
+        <input id="maxTrades" type="number" step="1" placeholder="例：5">
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button id="saveRules">ルール保存</button>
+      <button class="secondary" id="resetToday">今日をリセット</button>
+      <span class="muted">※データは端末内（localStorage）に保存</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="align-items:center; justify-content:space-between;">
+      <div>
+        <span class="pill" id="pnlPill">今日の損益：0</span>
+        <span class="pill" id="countPill">回数：0</span>
+        <span class="pill" id="streakPill">連敗：0</span>
+      </div>
+      <button id="preCheck">エントリー前チェック</button>
+    </div>
+    <div id="checkResult" class="muted" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:14px; margin:0 0 10px;">トレード追加</h2>
+    <div class="row">
+      <div class="col">
+        <label>銘柄（コード/名前）</label>
+        <input id="symbol" placeholder="例：5803 / フジクラ">
+      </div>
+      <div class="col">
+        <label>方向</label>
+        <select id="side">
+          <option value="LONG">買い（LONG）</option>
+          <option value="SHORT">売り（SHORT）</option>
+        </select>
+      </div>
+      <div class="col">
+        <label>IN価格</label>
+        <input id="entry" type="number" step="0.1" placeholder="例：10480">
+      </div>
+      <div class="col">
+        <label>OUT価格</label>
+        <input id="exit" type="number" step="0.1" placeholder="例：10520">
+      </div>
+      <div class="col">
+        <label>枚数（株数）</label>
+        <input id="qty" type="number" step="1" placeholder="例：100">
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <div class="col">
+        <label>メモ（根拠/反省/スクショURL）</label>
+        <textarea id="note" placeholder="例：20EMA反発、板に厚い買い。損切り遅れ注意。"></textarea>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button id="addTrade">追加</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:14px; margin:0 0 10px;">履歴</h2>
+    <div class="muted" id="summary"></div>
+    <div style="overflow:auto;">
+      <table id="table">
+        <thead>
+          <tr>
+            <th>時刻</th><th>銘柄</th><th>方向</th><th>IN→OUT</th><th>枚数</th><th>損益</th><th>メモ</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:14px; margin:0 0 10px;">エクスポート</h2>
+    <div class="row">
+      <button id="exportJson">JSONをコピー</button>
+      <button class="secondary" id="exportCsv">CSVをコピー</button>
+    </div>
+    <div class="muted" style="margin-top:8px;">※メモ帳やスプレッドシートに貼れる</div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
